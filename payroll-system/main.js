@@ -289,6 +289,9 @@
       addCell(row, formatMoney(run.net_pay_ugx), "numeric");
       const actions = document.createElement("td");
       actions.append(actionButton("View", "view-run", run.id));
+      if (run.status === "draft" && (activeAdmin() || String(run.created_by) === String(activeUser.id))) {
+        actions.append(actionButton("Delete draft", "delete-run", run.id));
+      }
       row.append(actions);
       tbody.append(row);
     });
@@ -314,6 +317,25 @@
     exportButton.textContent = "Export payroll CSV";
     exportButton.addEventListener("click", () => exportRunCsv(currentDetail));
     buttons.append(exportButton);
+    if (result.run.status === "draft" && (activeAdmin() || (activeUser.role === "payroll_operator" && String(result.run.created_by) === String(activeUser.id)))) {
+      const removeDraft = document.createElement("button");
+      removeDraft.className = "button button-danger";
+      removeDraft.type = "button";
+      removeDraft.textContent = "Delete draft";
+      removeDraft.addEventListener("click", async () => {
+        if (!window.confirm("Delete this draft payroll? You can create the period again afterwards.")) return;
+        try {
+          await request("/api/payroll/runs/" + encodeURIComponent(id), { method: "DELETE", body: "{}" });
+          panel.classList.add("hidden");
+          currentDetail = null;
+          await loadRuns();
+          showMessage("Draft payroll deleted.", false);
+        } catch (error) {
+          showMessage(error.message, true);
+        }
+      });
+      buttons.append(removeDraft);
+    }
     if (result.run.status === "draft" && ["owner", "payroll_admin"].includes(activeUser.role)) {
       const approve = document.createElement("button");
       approve.className = "button button-primary";
@@ -442,9 +464,20 @@
   });
 
   byId("runHistoryRows").addEventListener("click", async (event) => {
-    const button = event.target.closest("button[data-action='view-run']");
+    const button = event.target.closest("button[data-action]");
     if (!button) return;
-    try { await showRunDetail(button.dataset.id); }
+    try {
+      if (button.dataset.action === "delete-run") {
+        if (!window.confirm("Delete this draft payroll? You can create the period again afterwards.")) return;
+        await request("/api/payroll/runs/" + encodeURIComponent(button.dataset.id), { method: "DELETE", body: "{}" });
+        byId("runDetail").classList.add("hidden");
+        currentDetail = null;
+        await loadRuns();
+        showMessage("Draft payroll deleted.", false);
+        return;
+      }
+      if (button.dataset.action === "view-run") await showRunDetail(button.dataset.id);
+    }
     catch (error) { showMessage(error.message, true); }
   });
 
