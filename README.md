@@ -1,66 +1,36 @@
 # Payroll Management System
 
-A small client-side payroll calculator built with HTML, CSS, and jQuery. Enter an employee's name,
-hours worked, and hourly rate to get their gross salary, 10% tax deduction, and net salary in a
-running report table.
+A lightweight payroll calculator and report built with HTML, CSS, and vanilla JavaScript.
 
 ## Features
 
-- Calculates gross, tax (10%), and net salary per employee
-- Appends each calculation to a salary report table without reloading the page
-- Validates input: name is required, hours and rate must be numbers of zero or more
-- Clears the form and returns focus to the name field after each entry
+- Calculates gross pay, a configurable percentage deduction, and net pay
+- Defaults the deduction rate to 10%; the rate can be changed for each entry
+- Validates names, hours, rates, dates, and deduction percentages
+- Saves entries in the current browser using local storage
+- Shows payroll totals and supports employee-name search
+- Deletes individual entries or clears the saved report
+- Exports entries to CSV
+- Responsive layout for desktop, tablet, and mobile screens
 
-## Project structure
+## Run
 
-```
-payroll-system/
-  index.html   # Markup: input form, Calculate button, report table
-  main.js      # Salary calculation and validation
-  style.css    # Page and table styling
-```
+No build step or package installation is required. Open \`payroll-system/index.html\` in a browser, or serve the repository locally:
 
-## Setup
-
-There is no build step and no dependencies to install.
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/Wilberforcedev/Payroll_mgt-system-.git
-   cd Payroll_mgt-system-
-   ```
-2. Open `payroll-system/index.html` in a browser.
-
-To serve it over HTTP instead of opening the file directly:
-
-```bash
+\`\`\`bash
 python -m http.server 8000
-```
+\`\`\`
 
-Then visit <http://localhost:8000/payroll-system/>.
-
-jQuery 3.6.0 is loaded from a CDN, so the first load requires an internet connection.
-
-## Usage
-
-1. Type the employee's name.
-2. Enter hours worked and the hourly rate (decimals are allowed).
-3. Click **Calculate Salary**.
-4. A new row appears in the Salary Report table with the gross salary, tax reduction, and net
-   salary. The form resets, ready for the next employee.
+Then open <http://localhost:8000/payroll-system/>.
 
 ## Calculation
 
-| Value | Formula |
-| --- | --- |
-| Gross salary | `hours worked × hourly rate` |
-| Tax reduction | `gross salary × 0.10` |
-| Net salary | `gross salary - tax reduction` |
+- Gross pay = hours worked × hourly rate
+- Deduction = gross pay × configured deduction percentage
+- Net pay = gross pay − deduction
 
-Amounts are rounded to two decimal places for display; the tax rate is the `TAX_RATE` constant at
-the top of `main.js` if it needs to change.
+Amounts are labelled in Ugandan shillings (UGX). The 10% default is a configurable example rate; this calculator does not determine statutory tax, PAYE, pension, or other payroll obligations.
 
-## Limitations
+## Data
 
-- The report is kept in page memory only — reloading the page clears it.
-- Currency is not labeled; amounts are shown as plain numbers.
+Payroll entries are stored in the browser's local storage on the device where they are entered. This is a front-end demonstration and does not provide user accounts, server-side storage, backups, or access controls.
