@@ -179,6 +179,7 @@ const csrfProtection = (req, res, next) => {
   next();
 };
 app.use("/api", csrfProtection);
+app.use("/api", (_req, res, next) => { res.set("Cache-Control", "no-store"); next(); });
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -517,9 +518,33 @@ app.use((error, _req, res, _next) => {
   res.status(500).json({ error: "The request could not be completed." });
 });
 
+async function runMigrations() {
+  await pool.query("CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW())");
+  const migrationDir = path.join(__dirname, "db", "migrations");
+  const files = fs.readdirSync(migrationDir).filter((file) => /^\\d+_[a-z0-9_-]+\\.sql$/.test(file)).sort();
+  for (const file of files) {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("SELECT pg_advisory_xact_lock(hashtext('payroll-desk-schema-migrations'))");
+      const existing = await client.query("SELECT 1 FROM schema_migrations WHERE version=$1", [file]);
+      if (!existing.rows.length) {
+        const sql = fs.readFileSync(path.join(migrationDir, file), "utf8");
+        await client.query(sql);
+        await client.query("INSERT INTO schema_migrations (version) VALUES ($1)", [file]);
+      }
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+}
+
 async function start() {
-  const schema = fs.readFileSync(path.join(__dirname, "db", "schema.sql"), "utf8");
-  await pool.query(schema);
+  await runMigrations();
   const count = await pool.query("SELECT COUNT(*)::int AS count FROM app_users");
   if (count.rows[0].count === 0) {
     const bootstrapEmail = process.env.BOOTSTRAP_ADMIN_EMAIL;
