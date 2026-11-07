@@ -9,7 +9,7 @@ const rateLimit = require("express-rate-limit");
 const session = require("express-session");
 const connectPgSimple = require("connect-pg-simple");
 const { Pool } = require("pg");
-const { calculatePayrollItem, ugx, RESIDENT_PAYER_VERSION } = require("./lib/payroll");
+const { calculatePayrollItem, ugx, RESIDENT_PAYE_VERSION } = require("./lib/payroll");
 
 const production = process.env.NODE_ENV === "production";
 const port = Number(process.env.PORT || 3000);
