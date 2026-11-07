@@ -9,7 +9,7 @@ const rateLimit = require("express-rate-limit");
 const session = require("express-session");
 const connectPgSimple = require("connect-pg-simple");
 const { Pool } = require("pg");
-const { calculatePayrollItem, ugx, RESIDENT_PAYE_VERSION } = require("./lib/payroll");
+const { calculatePayrollItem, ugx, RESIDENT_PAYER_VERSION } = require("./lib/payroll");
 
 const production = process.env.NODE_ENV === "production";
 const port = Number(process.env.PORT || 3000);
@@ -47,6 +47,7 @@ app.use(helmet({
   }
 }));
 app.use(express.json({ limit: "100kb" }));
+app.use((req, _res, next) => { req.body = req.body || {}; next(); });
 app.use(session({
   name: "payroll.sid",
   secret: sessionSecret,
@@ -237,6 +238,61 @@ app.post("/api/auth/password", currentUser, asyncRoute(async (req, res) => {
 }));
 
 app.use("/api", currentUser, readyUser);
+
+
+app.get("/api/users", currentUser, readyUser, allowRoles("owner"), asyncRoute(async (_req, res) => {
+  const result = await pool.query("SELECT id, email, role, active, password_change_required, created_at FROM app_users ORDER BY email");
+  res.json({ users: result.rows.map((user) => ({ ...safeUser(user), active: user.active, created_at: user.created_at })) });
+}));
+
+app.post("/api/users", currentUser, readyUser, allowRoles("owner"), asyncRoute(async (req, res) => {
+  const accountEmail = email(req.body.email);
+  const password = typeof req.body.temporary_password === "string" ? req.body.temporary_password : "";
+  const role = req.body.role;
+  if (password.length < 14 || password.length > 200) throw new Error("Temporary password must have at least 14 characters.");
+  if (!["owner", "payroll_admin", "payroll_operator", "viewer"].includes(role)) throw new Error("Select a valid user role.");
+  const passwordHash = await hashPassword(password);
+  const result = await pool.query(
+    "INSERT INTO app_users (email, password_hash, role, password_change_required) VALUES ($1, $2, $3, TRUE) RETURNING id, email, role, active, password_change_required, created_at",
+    [accountEmail, passwordHash, role]
+  );
+  await audit(pool, req.user.id, "user.created", "user", result.rows[0].id, { email: accountEmail, role });
+  res.status(201).json({ user: { ...safeUser(result.rows[0]), active: result.rows[0].active, created_at: result.rows[0].created_at } });
+}));
+
+app.patch("/api/users/:id/reset-password", currentUser, readyUser, allowRoles("owner"), asyncRoute(async (req, res) => {
+  const id = ugx(req.params.id, "User ID");
+  const password = typeof req.body.temporary_password === "string" ? req.body.temporary_password : "";
+  if (password.length < 14 || password.length > 200) throw new Error("Temporary password must have at least 14 characters.");
+  const passwordHash = await hashPassword(password);
+  const result = await pool.query(
+    "UPDATE app_users SET password_hash=$1, password_change_required=TRUE, updated_at=NOW() WHERE id=$2 RETURNING id, email",
+    [passwordHash, id]
+  );
+  if (!result.rows[0]) return res.status(404).json({ error: "User not found." });
+  await audit(pool, req.user.id, "user.password_reset", "user", id, { email: result.rows[0].email });
+  res.json({ ok: true });
+}));
+
+app.patch("/api/users/:id/active", currentUser, readyUser, allowRoles("owner"), asyncRoute(async (req, res) => {
+  const id = ugx(req.params.id, "User ID");
+  if (id === Number(req.user.id)) return res.status(400).json({ error: "You cannot deactivate your own account." });
+  if (typeof req.body.active !== "boolean") throw new Error("Active status must be true or false.");
+  const result = await pool.query(
+    "UPDATE app_users SET active=$1, updated_at=NOW() WHERE id=$2 RETURNING id, email, role, active",
+    [req.body.active, id]
+  );
+  if (!result.rows[0]) return res.status(404).json({ error: "User not found." });
+  if (!req.body.active && result.rows[0].role === "owner") {
+    const owners = await pool.query("SELECT COUNT(*)::int AS count FROM app_users WHERE role='owner' AND active=TRUE");
+    if (owners.rows[0].count === 0) {
+      await pool.query("UPDATE app_users SET active=TRUE WHERE id=$1", [id]);
+      return res.status(409).json({ error: "At least one active owner account must remain." });
+    }
+  }
+  await audit(pool, req.user.id, "user.active_changed", "user", id, { active: req.body.active });
+  res.json({ user: { id: String(result.rows[0].id), email: result.rows[0].email, role: result.rows[0].role, active: result.rows[0].active } });
+}));
 
 app.get("/api/employees", asyncRoute(async (_req, res) => {
   const result = await pool.query(
