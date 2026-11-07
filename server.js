@@ -521,7 +521,7 @@ app.use((error, _req, res, _next) => {
 async function runMigrations() {
   await pool.query("CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW())");
   const migrationDir = path.join(__dirname, "db", "migrations");
-  const files = fs.readdirSync(migrationDir).filter((file) => /^\\d+_[a-z0-9_-]+\\.sql$/.test(file)).sort();
+  const files = fs.readdirSync(migrationDir).filter((file) => /^\d+_[a-z0-9_-]+\.sql$/.test(file)).sort();
   for (const file of files) {
     const client = await pool.connect();
     try {
