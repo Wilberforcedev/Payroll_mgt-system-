@@ -458,6 +458,38 @@ app.post("/api/payroll/runs/:id/approve", allowRoles("owner", "payroll_admin"), 
   }
 }));
 
+
+app.delete("/api/payroll/runs/:id", allowRoles("owner", "payroll_admin", "payroll_operator"), asyncRoute(async (req, res) => {
+  const id = ugx(req.params.id, "Payroll run ID");
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const found = await client.query("SELECT id, pay_period, status, created_by FROM payroll_runs WHERE id=$1 FOR UPDATE", [id]);
+    const run = found.rows[0];
+    if (!run) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Payroll run not found." });
+    }
+    if (run.status !== "draft") {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ error: "Approved payroll runs cannot be deleted." });
+    }
+    if (!["owner", "payroll_admin"].includes(req.user.role) && String(run.created_by) !== String(req.user.id)) {
+      await client.query("ROLLBACK");
+      return res.status(403).json({ error: "You may only delete your own draft payroll runs." });
+    }
+    await audit(client, req.user.id, "payroll.draft_deleted", "payroll_run", id, { pay_period: run.pay_period });
+    await client.query("DELETE FROM payroll_runs WHERE id=$1", [id]);
+    await client.query("COMMIT");
+    res.status(204).end();
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}));
+
 app.get("/api/audit", allowRoles("owner", "payroll_admin"), asyncRoute(async (_req, res) => {
   const result = await pool.query(
     "SELECT id, actor_user_id, event_type, resource_type, resource_id, details, created_at FROM audit_events ORDER BY created_at DESC LIMIT 500"
