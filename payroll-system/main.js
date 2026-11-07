@@ -190,10 +190,6 @@
     nameInput.focus();
   });
 
-  form.addEventListener("reset", () => {
-    window.setTimeout(() => setStatus("", false), 0);
-  });
-
   rows.addEventListener("click", (event) => {
     const button = event.target.closest("button[data-action]");
     if (!button) return;
