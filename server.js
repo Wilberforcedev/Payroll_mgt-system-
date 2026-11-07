@@ -343,7 +343,7 @@ app.patch("/api/employees/:id", allowRoles("owner", "payroll_admin"), asyncRoute
 
 app.get("/api/payroll/runs", asyncRoute(async (_req, res) => {
   const result = await pool.query(
-    "SELECT id, pay_period, status, employee_count, gross_cash_ugx, taxable_income_ugx, local_service_tax_ugx, paye_ugx, employee_nssf_ugx, employer_nssf_ugx, net_pay_ugx, created_at, approved_at FROM payroll_runs ORDER BY pay_period DESC"
+    "SELECT id, pay_period, status, employee_count, gross_cash_ugx, taxable_income_ugx, local_service_tax_ugx, paye_ugx, employee_nssf_ugx, employer_nssf_ugx, net_pay_ugx, created_at, approved_at, created_by FROM payroll_runs ORDER BY pay_period DESC"
   );
   res.json({ runs: result.rows });
 }));
@@ -423,7 +423,7 @@ app.post("/api/payroll/runs", allowRoles("owner", "payroll_admin", "payroll_oper
 app.get("/api/payroll/runs/:id", asyncRoute(async (req, res) => {
   const id = ugx(req.params.id, "Payroll run ID");
   const run = await pool.query(
-    "SELECT id, pay_period, status, employee_count, gross_cash_ugx, taxable_income_ugx, local_service_tax_ugx, paye_ugx, employee_nssf_ugx, employer_nssf_ugx, net_pay_ugx, created_at, approved_at FROM payroll_runs WHERE id=$1",
+    "SELECT id, pay_period, status, employee_count, gross_cash_ugx, taxable_income_ugx, local_service_tax_ugx, paye_ugx, employee_nssf_ugx, employer_nssf_ugx, net_pay_ugx, created_at, approved_at, created_by FROM payroll_runs WHERE id=$1",
     [id]
   );
   if (!run.rows[0]) return res.status(404).json({ error: "Payroll run not found." });
