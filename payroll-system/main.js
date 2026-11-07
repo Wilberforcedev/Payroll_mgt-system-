@@ -90,6 +90,7 @@
     byId("auditTab").classList.toggle("hidden", !["owner", "payroll_admin"].includes(activeUser.role));
     document.querySelectorAll(".admin-control").forEach((node) => node.classList.toggle("hidden", !activeAdmin()));
     document.querySelectorAll(".payroll-control").forEach((node) => node.classList.toggle("hidden", !canOperatePayroll()));
+    byId("runForm").classList.toggle("hidden", !canOperatePayroll());
   }
 
   function roleName(role) {
@@ -399,6 +400,12 @@
     const inputs = Array.from(document.querySelectorAll("#runRows input[data-employee-id]"));
     if (!inputs.length) {
       showMessage("Add active employees before preparing payroll.", true);
+      return;
+    }
+    const invalidInput = inputs.find((input) => input.value === "" || !input.checkValidity());
+    if (invalidInput) {
+      invalidInput.reportValidity();
+      showMessage("Enter valid whole-UGX amounts for every active employee.", true);
       return;
     }
     const map = new Map();
