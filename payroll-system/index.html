@@ -4,140 +4,178 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#123b35">
-  <title>Payroll Calculator</title>
+  <title>Payroll Desk</title>
   <link rel="stylesheet" href="style.css">
   <script src="main.js" defer></script>
 </head>
 <body>
   <header class="site-header">
     <div class="header-inner">
-      <a class="brand" href="./" aria-label="Payroll Calculator home">
+      <a class="brand" href="/" aria-label="Payroll Desk home">
         <span class="brand-mark" aria-hidden="true">P</span>
         <span>Payroll <span class="brand-light">Desk</span></span>
       </a>
-      <span class="header-tag">PAYROLL WORKSPACE</span>
+      <div class="session-controls hidden" id="sessionControls">
+        <span id="currentUser" class="current-user"></span>
+        <button class="button button-header" id="changePasswordOpen" type="button">Change password</button>
+        <button class="button button-header" id="logoutButton" type="button">Sign out</button>
+      </div>
     </div>
   </header>
 
   <main class="page-shell">
-    <section class="page-heading" aria-labelledby="page-title">
-      <div>
-        <p class="eyebrow">PAYROLL OVERVIEW</p>
-        <h1 id="page-title">Salary calculator</h1>
-        <p class="intro">Prepare a clear pay summary for each employee.</p>
-      </div>
-      <div class="period-chip"><span class="status-dot"></span> Current session</div>
-    </section>
-
-    <aside class="notice" aria-label="Important payroll limitation">
-      <strong>Planning tool only.</strong>
-      This calculator applies the deduction rate you enter. It does not calculate Uganda PAYE, NSSF,
-      overtime, benefits, or other statutory obligations. Do not use it as the sole basis for actual payroll.
-    </aside>
-
-    <section class="summary-grid" aria-label="Payroll totals">
-      <article class="summary-card">
-        <span class="summary-label">Employees recorded</span>
-        <strong id="employeeCount" class="summary-value">0</strong>
-        <span class="summary-foot">This browser session</span>
-      </article>
-      <article class="summary-card">
-        <span class="summary-label">Total gross pay</span>
-        <strong id="totalGross" class="summary-value">UGX 0.00</strong>
-        <span class="summary-foot">Before deductions</span>
-      </article>
-      <article class="summary-card">
-        <span class="summary-label">Total deductions</span>
-        <strong id="totalDeductions" class="summary-value">UGX 0.00</strong>
-        <span class="summary-foot">Based on entered rates</span>
-      </article>
-      <article class="summary-card summary-card-accent">
-        <span class="summary-label">Total net pay</span>
-        <strong id="totalNet" class="summary-value">UGX 0.00</strong>
-        <span class="summary-foot">After entered deductions</span>
-      </article>
-    </section>
-
-    <section class="panel form-panel" aria-labelledby="form-title">
-      <div class="panel-heading">
-        <div>
-          <p class="eyebrow">PAY DETAILS</p>
-          <h2 id="form-title">Add a pay record</h2>
+    <section id="loginView" class="login-card">
+      <p class="eyebrow">SECURE PAYROLL WORKSPACE</p>
+      <h1>Sign in</h1>
+      <p class="intro">Use the account issued by your payroll system owner.</p>
+      <form id="loginForm" class="stack-form">
+        <div class="field">
+          <label for="loginEmail">Email address</label>
+          <input id="loginEmail" type="email" autocomplete="username" maxlength="254" required>
         </div>
-        <span class="required-note">All fields required</span>
-      </div>
-      <form id="payrollForm" novalidate>
-        <div class="form-grid">
-          <div class="field field-wide">
-            <label for="employeeName">Employee name</label>
-            <input id="employeeName" name="employeeName" type="text" autocomplete="name" maxlength="100" required placeholder="e.g. Amina Namusoke">
-          </div>
-          <div class="field">
-            <label for="payPeriod">Pay period</label>
-            <input id="payPeriod" name="payPeriod" type="month" required>
-          </div>
-          <div class="field">
-            <label for="hoursWorked">Hours worked</label>
-            <input id="hoursWorked" name="hoursWorked" type="number" min="0" max="744" step="0.01" inputmode="decimal" required placeholder="160">
-          </div>
-          <div class="field">
-            <label for="hourlyRate">Hourly rate <span class="unit">(UGX)</span></label>
-            <input id="hourlyRate" name="hourlyRate" type="number" min="0" max="1000000000" step="0.01" inputmode="decimal" required placeholder="5,000">
-          </div>
-          <div class="field">
-            <label for="deductionRate">Deduction rate <span class="unit">(%)</span></label>
-            <input id="deductionRate" name="deductionRate" type="number" min="0" max="100" step="0.01" inputmode="decimal" required value="0">
-            <small>Enter an agreed estimate. This is not a statutory tax calculation.</small>
-          </div>
+        <div class="field">
+          <label for="loginPassword">Password</label>
+          <input id="loginPassword" type="password" autocomplete="current-password" required>
         </div>
-        <div class="form-actions">
-          <button class="button button-primary" id="submitButton" type="submit">Add pay record</button>
-          <button class="button button-secondary hidden" id="cancelEdit" type="button">Cancel edit</button>
-          <button class="button button-quiet" id="resetForm" type="reset">Clear form</button>
-        </div>
+        <button class="button button-primary" type="submit">Sign in</button>
       </form>
-      <p id="statusMessage" class="status-message" role="status" aria-live="polite"></p>
+      <p class="form-message" id="loginMessage" role="status" aria-live="polite"></p>
     </section>
 
-    <section class="panel report-panel" aria-labelledby="report-title">
-      <div class="panel-heading report-heading">
+    <section id="passwordChangeView" class="login-card hidden" aria-labelledby="passwordChangeTitle">
+      <p class="eyebrow">ACCOUNT SECURITY</p>
+      <h1 id="passwordChangeTitle">Set a new password</h1>
+      <p class="intro">Use at least 14 characters. Your temporary password will stop working after this change.</p>
+      <form id="passwordForm" class="stack-form">
+        <div class="field">
+          <label for="currentPassword">Current password</label>
+          <input id="currentPassword" type="password" autocomplete="current-password" required>
+        </div>
+        <div class="field">
+          <label for="newPassword">New password</label>
+          <input id="newPassword" type="password" minlength="14" maxlength="200" autocomplete="new-password" required>
+        </div>
+        <button class="button button-primary" type="submit">Update password</button>
+      </form>
+      <p class="form-message" id="passwordMessage" role="status" aria-live="polite"></p>
+    </section>
+
+    <section id="appView" class="hidden">
+      <div class="page-heading">
         <div>
-          <p class="eyebrow">PAY REGISTER</p>
-          <h2 id="report-title">Payroll report</h2>
+          <p class="eyebrow">PAYROLL MANAGEMENT</p>
+          <h1>Payroll workspace</h1>
+          <p class="intro">Manage employee records, prepare payroll drafts, and review approvals.</p>
         </div>
-        <div class="report-actions">
-          <button class="button button-secondary" id="exportCsv" type="button">Export CSV</button>
-          <button class="button button-secondary" id="printReport" type="button">Print</button>
-          <button class="button button-danger" id="clearReport" type="button" disabled>Clear report</button>
-        </div>
+        <div class="period-chip"><span class="status-dot"></span><span>UGX · Uganda</span></div>
       </div>
-      <div class="table-wrap">
-        <table>
-          <caption class="sr-only">Payroll records entered during this browser session</caption>
-          <thead>
-            <tr>
-              <th scope="col">Employee</th>
-              <th scope="col">Period</th>
-              <th scope="col" class="numeric">Hours</th>
-              <th scope="col" class="numeric">Rate</th>
-              <th scope="col" class="numeric">Gross pay</th>
-              <th scope="col" class="numeric">Deduction</th>
-              <th scope="col" class="numeric">Net pay</th>
-              <th scope="col" class="action-column"><span class="sr-only">Actions</span></th>
-            </tr>
-          </thead>
-          <tbody id="salaryDetails">
-            <tr class="empty-row"><td colspan="8">No pay records yet. Add an employee above to begin.</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p class="report-footnote">Records stay in memory for this browser session and are cleared when the page is reloaded. Export the CSV if you need a copy.</p>
-    </section>
 
-    <footer class="page-footer">
-      <span>Payroll Desk</span>
-      <span>Use verified payroll rules and secure systems for production processing.</span>
-    </footer>
+      <aside class="notice">
+        <strong>Payroll review required.</strong>
+        PAYE and NSSF use the displayed FY 2026/27 rules. The employer must confirm taxable emoluments, NSSF eligibility, Local Service Tax and applicable exemptions. This system does not file returns or transfer salaries.
+      </aside>
+
+      <nav class="tabs" aria-label="Payroll sections">
+        <button class="tab-button active" data-view="employeesView" type="button">Employees</button>
+        <button class="tab-button" data-view="runView" type="button">Prepare payroll</button>
+        <button class="tab-button" data-view="historyView" type="button">Payroll history</button>
+        <button class="tab-button hidden" id="usersTab" data-view="usersView" type="button">User access</button>
+        <button class="tab-button hidden" id="auditTab" data-view="auditView" type="button">Audit log</button>
+      </nav>
+
+      <p id="appMessage" class="status-message" role="status" aria-live="polite"></p>
+
+      <section id="employeesView" class="panel view-panel" aria-labelledby="employeesTitle">
+        <div class="panel-heading">
+          <div><p class="eyebrow">PEOPLE</p><h2 id="employeesTitle">Employee register</h2></div>
+          <span class="required-note">Inactive staff remain in past payroll records</span>
+        </div>
+        <form id="employeeForm" class="form-grid admin-control hidden">
+          <input id="employeeId" type="hidden">
+          <div class="field"><label for="employeeNo">Employee number</label><input id="employeeNo" maxlength="40" required></div>
+          <div class="field"><label for="firstName">First name</label><input id="firstName" maxlength="80" required></div>
+          <div class="field"><label for="lastName">Last name</label><input id="lastName" maxlength="80" required></div>
+          <div class="field"><label for="employeeEmail">Email (optional)</label><input id="employeeEmail" type="email" maxlength="254"></div>
+          <div class="field"><label for="taxResidency">Tax residency</label><select id="taxResidency" required><option value="resident">Resident</option><option value="non_resident">Non-resident</option></select></div>
+          <div class="field"><label for="nssfMode">NSSF status</label><select id="nssfMode" required><option value="standard">Standard (5% employee + 10% employer)</option><option value="special">Special (10% employer only)</option><option value="exempt">Exempt / not applicable</option></select></div>
+          <div class="field checkbox-field"><label><input id="employeeActive" type="checkbox" checked> Active employee</label></div>
+          <div class="form-actions field-actions">
+            <button class="button button-primary" id="employeeSubmit" type="submit">Add employee</button>
+            <button class="button button-secondary hidden" id="employeeCancel" type="button">Cancel edit</button>
+          </div>
+        </form>
+        <p class="helper-copy">Set residency and NSSF status based on verified employee information and current rules.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Employee no.</th><th>Name</th><th>Email</th><th>Tax status</th><th>NSSF</th><th>Status</th><th class="action-column">Actions</th></tr></thead>
+            <tbody id="employeeRows"><tr class="empty-row"><td colspan="7">Loading employees…</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="runView" class="panel view-panel hidden" aria-labelledby="runTitle">
+        <div class="panel-heading">
+          <div><p class="eyebrow">MONTHLY PAY RUN</p><h2 id="runTitle">Prepare a payroll draft</h2></div>
+          <span class="required-note">Drafts require approval before payroll is final</span>
+        </div>
+        <form id="runForm">
+          <div class="run-period-field field">
+            <label for="runPeriod">Pay period</label>
+            <input id="runPeriod" type="month" required>
+          </div>
+          <p class="helper-copy">Enter whole UGX amounts. Taxable employment income includes taxable allowances/benefits assessed by the employer. LST is entered from the applicable local government schedule for this pay period.</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Employee</th><th class="numeric">Gross cash pay</th><th class="numeric">Taxable income</th><th class="numeric">LST this period</th><th class="numeric">NSSF wage</th></tr></thead>
+              <tbody id="runRows"><tr class="empty-row"><td colspan="5">Loading active employees…</td></tr></tbody>
+            </table>
+          </div>
+          <div class="form-actions">
+            <button class="button button-primary payroll-control" id="createRunButton" type="submit">Calculate draft payroll</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="historyView" class="panel view-panel hidden" aria-labelledby="historyTitle">
+        <div class="panel-heading">
+          <div><p class="eyebrow">REVIEW & APPROVAL</p><h2 id="historyTitle">Payroll history</h2></div>
+          <button class="button button-secondary" id="refreshRuns" type="button">Refresh</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Period</th><th>Status</th><th class="numeric">Employees</th><th class="numeric">Gross pay</th><th class="numeric">PAYE</th><th class="numeric">Employee NSSF</th><th class="numeric">Employer NSSF</th><th class="numeric">Net pay</th><th>Actions</th></tr></thead>
+            <tbody id="runHistoryRows"><tr class="empty-row"><td colspan="9">No payroll runs yet.</td></tr></tbody>
+          </table>
+        </div>
+        <div id="runDetail" class="run-detail hidden"></div>
+      </section>
+
+      <section id="usersView" class="panel view-panel hidden" aria-labelledby="usersTitle">
+        <div class="panel-heading"><div><p class="eyebrow">ACCESS CONTROL</p><h2 id="usersTitle">System users</h2></div></div>
+        <form id="userForm" class="form-grid">
+          <div class="field"><label for="userEmail">User email</label><input id="userEmail" type="email" maxlength="254" required></div>
+          <div class="field"><label for="userRole">Role</label><select id="userRole"><option value="payroll_admin">Payroll admin</option><option value="payroll_operator">Payroll operator</option><option value="viewer">Read-only viewer</option><option value="owner">Owner</option></select></div>
+          <div class="field"><label for="temporaryPassword">Temporary password (14+ chars)</label><input id="temporaryPassword" type="password" minlength="14" maxlength="200" required></div>
+          <div class="form-actions field-actions"><button class="button button-primary" type="submit">Create user</button></div>
+        </form>
+        <p class="helper-copy">Share temporary passwords through a secure channel. New users must change them at first sign-in.</p>
+        <div class="table-wrap">
+          <table><thead><tr><th>Email</th><th>Role</th><th>Status</th><th>Password setup</th><th>Actions</th></tr></thead><tbody id="userRows"></tbody></table>
+        </div>
+      </section>
+
+      <section id="auditView" class="panel view-panel hidden" aria-labelledby="auditTitle">
+        <div class="panel-heading"><div><p class="eyebrow">ACTIVITY</p><h2 id="auditTitle">Audit log</h2></div></div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Time</th><th>User ID</th><th>Event</th><th>Resource</th><th>Details</th></tr></thead><tbody id="auditRows"></tbody></table>
+        </div>
+      </section>
+
+      <footer class="page-footer">
+        <span>Payroll Desk · Uganda</span>
+        <span>PAYE bands apply from 1 July 2026. Review each draft before approval.</span>
+      </footer>
+    </section>
   </main>
 </body>
 </html>
