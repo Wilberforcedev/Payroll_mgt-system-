@@ -1,41 +1,143 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payroll Management System</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#123b35">
+  <title>Payroll Calculator</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="main.js" defer></script>
 </head>
 <body>
-    <br><br><br>
-    <div class="container">
-        <h2>Payroll Management System</h2>
-        <form action="">
-            <label for="employeeName">Employee Name</label>
-            <input type="text" id="employeeName">
-            <label for="hoursWorked">Hours Worked</label>
-            <input type="number" id="hoursWorked" min="0" step="0.01">
-            <label for="hourlyRate">Hourly Rate</label>
-            <input type="number" id="hourlyRate" min="0" step="0.01">
-        </form>
-        <button id="calculateSalary">Calculate Salary</button>
-        <h2>Salary Report</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Employee Name</th>
-                    <th>Hours Worked</th>
-                    <th>Hourly Rate</th>
-                    <th>Gross Salary</th>
-                    <th>Tax Reduction(10%)</th>
-                    <th>Net Salary</th>
-                </tr>
-            </thead>
-            <tbody id="salaryDetails"></tbody>
-        </table>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="./" aria-label="Payroll Calculator home">
+        <span class="brand-mark" aria-hidden="true">P</span>
+        <span>Payroll <span class="brand-light">Desk</span></span>
+      </a>
+      <span class="header-tag">PAYROLL WORKSPACE</span>
     </div>
+  </header>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.js"></script>
-    <script src="main.js"></script>
+  <main class="page-shell">
+    <section class="page-heading" aria-labelledby="page-title">
+      <div>
+        <p class="eyebrow">PAYROLL OVERVIEW</p>
+        <h1 id="page-title">Salary calculator</h1>
+        <p class="intro">Prepare a clear pay summary for each employee.</p>
+      </div>
+      <div class="period-chip"><span class="status-dot"></span> Current session</div>
+    </section>
+
+    <aside class="notice" aria-label="Important payroll limitation">
+      <strong>Planning tool only.</strong>
+      This calculator applies the deduction rate you enter. It does not calculate Uganda PAYE, NSSF,
+      overtime, benefits, or other statutory obligations. Do not use it as the sole basis for actual payroll.
+    </aside>
+
+    <section class="summary-grid" aria-label="Payroll totals">
+      <article class="summary-card">
+        <span class="summary-label">Employees recorded</span>
+        <strong id="employeeCount" class="summary-value">0</strong>
+        <span class="summary-foot">This browser session</span>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">Total gross pay</span>
+        <strong id="totalGross" class="summary-value">UGX 0.00</strong>
+        <span class="summary-foot">Before deductions</span>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">Total deductions</span>
+        <strong id="totalDeductions" class="summary-value">UGX 0.00</strong>
+        <span class="summary-foot">Based on entered rates</span>
+      </article>
+      <article class="summary-card summary-card-accent">
+        <span class="summary-label">Total net pay</span>
+        <strong id="totalNet" class="summary-value">UGX 0.00</strong>
+        <span class="summary-foot">After entered deductions</span>
+      </article>
+    </section>
+
+    <section class="panel form-panel" aria-labelledby="form-title">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">PAY DETAILS</p>
+          <h2 id="form-title">Add a pay record</h2>
+        </div>
+        <span class="required-note">All fields required</span>
+      </div>
+      <form id="payrollForm" novalidate>
+        <div class="form-grid">
+          <div class="field field-wide">
+            <label for="employeeName">Employee name</label>
+            <input id="employeeName" name="employeeName" type="text" autocomplete="name" maxlength="100" required placeholder="e.g. Amina Namusoke">
+          </div>
+          <div class="field">
+            <label for="payPeriod">Pay period</label>
+            <input id="payPeriod" name="payPeriod" type="month" required>
+          </div>
+          <div class="field">
+            <label for="hoursWorked">Hours worked</label>
+            <input id="hoursWorked" name="hoursWorked" type="number" min="0" max="744" step="0.01" inputmode="decimal" required placeholder="160">
+          </div>
+          <div class="field">
+            <label for="hourlyRate">Hourly rate <span class="unit">(UGX)</span></label>
+            <input id="hourlyRate" name="hourlyRate" type="number" min="0" max="1000000000" step="0.01" inputmode="decimal" required placeholder="5,000">
+          </div>
+          <div class="field">
+            <label for="deductionRate">Deduction rate <span class="unit">(%)</span></label>
+            <input id="deductionRate" name="deductionRate" type="number" min="0" max="100" step="0.01" inputmode="decimal" required value="0">
+            <small>Enter an agreed estimate. This is not a statutory tax calculation.</small>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="button button-primary" id="submitButton" type="submit">Add pay record</button>
+          <button class="button button-secondary hidden" id="cancelEdit" type="button">Cancel edit</button>
+          <button class="button button-quiet" id="resetForm" type="reset">Clear form</button>
+        </div>
+      </form>
+      <p id="statusMessage" class="status-message" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="panel report-panel" aria-labelledby="report-title">
+      <div class="panel-heading report-heading">
+        <div>
+          <p class="eyebrow">PAY REGISTER</p>
+          <h2 id="report-title">Payroll report</h2>
+        </div>
+        <div class="report-actions">
+          <button class="button button-secondary" id="exportCsv" type="button">Export CSV</button>
+          <button class="button button-secondary" id="printReport" type="button">Print</button>
+          <button class="button button-danger" id="clearReport" type="button" disabled>Clear report</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <caption class="sr-only">Payroll records entered during this browser session</caption>
+          <thead>
+            <tr>
+              <th scope="col">Employee</th>
+              <th scope="col">Period</th>
+              <th scope="col" class="numeric">Hours</th>
+              <th scope="col" class="numeric">Rate</th>
+              <th scope="col" class="numeric">Gross pay</th>
+              <th scope="col" class="numeric">Deduction</th>
+              <th scope="col" class="numeric">Net pay</th>
+              <th scope="col" class="action-column"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody id="salaryDetails">
+            <tr class="empty-row"><td colspan="8">No pay records yet. Add an employee above to begin.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="report-footnote">Records stay in memory for this browser session and are cleared when the page is reloaded. Export the CSV if you need a copy.</p>
+    </section>
+
+    <footer class="page-footer">
+      <span>Payroll Desk</span>
+      <span>Use verified payroll rules and secure systems for production processing.</span>
+    </footer>
+  </main>
 </body>
 </html>
