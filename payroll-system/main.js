@@ -60,7 +60,6 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
       return true;
     } catch (error) {
-      showToast("Could not save entries. Check browser storage space.");
       return false;
     }
   }
@@ -194,9 +193,9 @@
 
   function deleteEntry(id) {
     entries = entries.filter(function (entry) { return entry.id !== id; });
-    saveEntries();
+    const saved = saveEntries();
     render();
-    showToast("Payroll entry deleted.");
+    showToast(saved ? "Payroll entry deleted." : "Entry deleted for this session; browser storage failed.");
   }
 
   form.addEventListener("submit", function (event) {
@@ -250,13 +249,13 @@
     };
 
     entries.unshift(entry);
-    saveEntries();
+    const saved = saveEntries();
     render();
     form.reset();
     deductionInput.value = String(TAX_RATE_DEFAULT);
     dateInput.value = localDateString(new Date());
     nameInput.focus();
-    showToast("Payroll entry added and saved.");
+    showToast(saved ? "Payroll entry added and saved." : "Entry added for this session; browser storage failed.");
   });
 
   searchInput.addEventListener("input", render);
@@ -264,9 +263,9 @@
   document.getElementById("clearAll").addEventListener("click", function () {
     if (!entries.length || !window.confirm("Delete all payroll entries saved in this browser?")) return;
     entries = [];
-    saveEntries();
+    const saved = saveEntries();
     render();
-    showToast("All payroll entries cleared.");
+    showToast(saved ? "All payroll entries cleared." : "Entries cleared for this session; browser storage failed.");
   });
 
   document.getElementById("exportCsv").addEventListener("click", function () {
