@@ -46,7 +46,7 @@ This version does not file URA or NSSF returns, make salary payments, calculate 
 4. Install dependencies and start the server:
 
    ```bash
-   npm install
+   npm ci
    npm start
    ```
 
@@ -54,14 +54,28 @@ This version does not file URA or NSSF returns, make salary payments, calculate 
 
 After the first owner account is created, remove `BOOTSTRAP_ADMIN_PASSWORD` from the deployment environment. Never commit `.env` or production credentials.
 
+## Tests
+
+Payroll calculations are covered by unit tests that need no database:
+
+```bash
+npm test
+```
+
+The suite checks the resident and non-resident PAYE bands, standard/special/exempt NSSF handling, Local Service Tax treatment, rounding, and the guards that reject unsafe amounts.
+
 ## Production deployment
 
 1. Provision PostgreSQL with backups enabled and restrict database access to the app.
 2. Set `NODE_ENV=production`, `DATABASE_URL`, `SESSION_SECRET`, and `PORT` in the host’s secret variables. Set `DATABASE_SSL=true` only when the database provider requires TLS.
 3. Add the bootstrap owner credentials for the initial deployment, then remove the temporary password once the first account exists.
 4. Terminate HTTPS at the hosting provider and confirm secure cookies work through its trusted proxy.
-5. Configure scheduled backups and test a restore before processing payroll.
-6. Review all tax, NSSF, LST, and employee classification settings with the employer’s payroll adviser before approving a live run.
+5. Install with `npm ci` so `package-lock.json` pins every direct and transitive dependency, then start with `npm start`.
+6. Point the platform health check at `/api/health`; it answers `200` only when PostgreSQL responds.
+7. Configure scheduled backups and test a restore before processing payroll.
+8. Review all tax, NSSF, LST, and employee classification settings with the employer’s payroll adviser before approving a live run.
+
+The server drains in-flight requests and closes the database pool on `SIGTERM`/`SIGINT`, so rolling deploys and platform restarts finish current requests. HTML is served with `Cache-Control: no-cache` so new releases appear immediately, while scripts and styles keep a one-hour cache.
 
 The application creates the initial database tables on startup. Schema changes after initial deployment should be introduced through reviewed, versioned migrations before deployment.
 

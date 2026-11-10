@@ -243,12 +243,12 @@ app.post("/api/auth/password", currentUser, asyncRoute(async (req, res) => {
 app.use("/api", currentUser, readyUser);
 
 
-app.get("/api/users", currentUser, readyUser, allowRoles("owner"), asyncRoute(async (_req, res) => {
+app.get("/api/users", allowRoles("owner"), asyncRoute(async (_req, res) => {
   const result = await pool.query("SELECT id, email, role, active, password_change_required, created_at FROM app_users ORDER BY email");
   res.json({ users: result.rows.map((user) => ({ ...safeUser(user), active: user.active, created_at: user.created_at })) });
 }));
 
-app.post("/api/users", currentUser, readyUser, allowRoles("owner"), asyncRoute(async (req, res) => {
+app.post("/api/users", allowRoles("owner"), asyncRoute(async (req, res) => {
   const accountEmail = email(req.body.email);
   const password = typeof req.body.temporary_password === "string" ? req.body.temporary_password : "";
   const role = req.body.role;
@@ -263,7 +263,7 @@ app.post("/api/users", currentUser, readyUser, allowRoles("owner"), asyncRoute(a
   res.status(201).json({ user: { ...safeUser(result.rows[0]), active: result.rows[0].active, created_at: result.rows[0].created_at } });
 }));
 
-app.patch("/api/users/:id/reset-password", currentUser, readyUser, allowRoles("owner"), asyncRoute(async (req, res) => {
+app.patch("/api/users/:id/reset-password", allowRoles("owner"), asyncRoute(async (req, res) => {
   const id = ugx(req.params.id, "User ID");
   const password = typeof req.body.temporary_password === "string" ? req.body.temporary_password : "";
   if (password.length < 14 || password.length > 200) throw new Error("Temporary password must have at least 14 characters.");
@@ -277,7 +277,7 @@ app.patch("/api/users/:id/reset-password", currentUser, readyUser, allowRoles("o
   res.json({ ok: true });
 }));
 
-app.patch("/api/users/:id/active", currentUser, readyUser, allowRoles("owner"), asyncRoute(async (req, res) => {
+app.patch("/api/users/:id/active", allowRoles("owner"), asyncRoute(async (req, res) => {
   const id = ugx(req.params.id, "User ID");
   if (id === Number(req.user.id)) return res.status(400).json({ error: "You cannot deactivate your own account." });
   if (typeof req.body.active !== "boolean") throw new Error("Active status must be true or false.");
@@ -505,7 +505,10 @@ app.use("/payroll-system", express.static(path.join(__dirname, "payroll-system")
   etag: true,
   maxAge: production ? "1h" : 0,
   index: "index.html",
-  dotfiles: "deny"
+  dotfiles: "deny",
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith(".html")) res.setHeader("Cache-Control", "no-cache");
+  }
 }));
 app.get("/", (_req, res) => res.redirect("/payroll-system/"));
 
@@ -561,7 +564,37 @@ async function start() {
     );
     console.info("Created the initial payroll owner account. Remove BOOTSTRAP_ADMIN_PASSWORD from deployment variables after first startup.");
   }
-  app.listen(port, "0.0.0.0", () => console.info("Payroll app listening on port " + port));
+  const server = app.listen(port, "0.0.0.0", () => console.info("Payroll app listening on port " + port));
+  server.on("error", (error) => {
+    console.error("Server failed to start:", error.message);
+    process.exit(1);
+  });
+
+  let shuttingDown = false;
+  async function shutdown(signal) {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.info(signal + " received. Closing the server.");
+    const forceExit = setTimeout(() => {
+      console.error("Shutdown timed out with connections still open.");
+      process.exit(1);
+    }, 10000);
+    forceExit.unref();
+    server.close(async () => {
+      clearTimeout(forceExit);
+      try {
+        await pool.end();
+        process.exit(0);
+      } catch (error) {
+        console.error("Failed to close the database pool:", error.message);
+        process.exit(1);
+      }
+    });
+    if (typeof server.closeIdleConnections === "function") server.closeIdleConnections();
+  }
+
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
 }
 
 start().catch((error) => {
